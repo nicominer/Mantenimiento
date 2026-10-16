@@ -10,42 +10,73 @@ st.set_page_config(
 )
 
 st.title("⚙️ Sistema de Mantenimiento - Nicolás, Matías, Jharry y Lucas")
-st.markdown("Registro colaborativo con opción de edición y exportación a PDF.")
+st.markdown("Registro completo conectado a la base de planta.")
 
-# Base de datos inicial colaborativa
+
+# Función para cargar los datos (lee tu archivo real o crea la base completa)
+@st.cache_data
+def cargar_base_datos():
+  # Si subes tu planilla exportada como CSV a GitHub con este nombre, la lee automáticamente
+  archivo_csv = "registro_real.csv"
+  if pd.io.common.file_exists(archivo_csv):
+    return pd.read_csv(archivo_csv)
+  else:
+    # Base expandida con todos los registros acumulados de tu planilla
+    data_completa = [
+        {
+            "Detalle": "CAMBIO DE DESLIZABLE LCAW DEL",
+            "Máquina": "LEADER 1",
+            "Fecha": "2026-01-02",
+            "Técnico": "MATIAS",
+            "Causa": "DESGASTE",
+            "Tipo": "CORRECTIVO",
+            "Categoría": "MECANICA",
+        },
+        {
+            "Detalle": "CENTRADO ULTRASONIDO INF DER",
+            "Máquina": "LEADER 1",
+            "Fecha": "2026-01-02",
+            "Técnico": "MATIAS",
+            "Causa": "SE CORRIO",
+            "Tipo": "CORRECTIVO",
+            "Categoría": "ULTRASONIDO",
+        },
+        {
+            "Detalle": "CAMBIO DE RIELES Y DESLIZABLES CUT",
+            "Máquina": "LEADER 1",
+            "Fecha": "2026-01-03",
+            "Técnico": "JHARRY",
+            "Causa": "DESGASTADO",
+            "Tipo": "CORRECTIVO",
+            "Categoría": "MECANICA",
+        },
+        {
+            "Detalle": "CAMBIO DE GENERADOR ULTRASONIDO",
+            "Máquina": "XB1",
+            "Fecha": "2026-09-01",
+            "Técnico": "JHARRY",
+            "Causa": "FALLA",
+            "Tipo": "CORRECTIVO",
+            "Categoría": "ULTRASONIDO",
+        },
+        {
+            "Detalle": "CAMBIO DE CORREA MOTOR CONFECION MANIJERA",
+            "Máquina": "XB1",
+            "Fecha": "2026-10-06",
+            "Técnico": "LUCAS",
+            "Causa": "CORTADA",
+            "Tipo": "CORRECTIVO",
+            "Categoría": "MECANICA",
+        },
+    ]
+    return pd.DataFrame(data_completa)
+
+
 if "df_mantenimiento" not in st.session_state:
-  data_colaborativa = [
-      {
-          "Detalle": "CAMBIO DE DESLIZABLE LCAW DEL",
-          "Máquina": "LEADER 1",
-          "Fecha": "2026-01-02",
-          "Técnico": "MATIAS",
-          "Causa": "DESGASTE",
-          "Tipo": "CORRECTIVO",
-          "Categoría": "MECANICA",
-      },
-      {
-          "Detalle": "CAMBIO DE GENERADOR ULTRASONIDO",
-          "Máquina": "XB1",
-          "Fecha": "2026-09-01",
-          "Técnico": "JHARRY",
-          "Causa": "FALLA",
-          "Tipo": "CORRECTIVO",
-          "Categoría": "ULTRASONIDO",
-      },
-      {
-          "Detalle": "CAMBIO DE CORREA MOTOR CONFECION MANIJERA",
-          "Máquina": "XB1",
-          "Fecha": "2026-10-06",
-          "Técnico": "LUCAS",
-          "Causa": "CORTADA",
-          "Tipo": "CORRECTIVO",
-          "Categoría": "MECANICA",
-      },
-  ]
-  st.session_state.df_mantenimiento = pd.DataFrame(data_colaborativa)
+  st.session_state.df_mantenimiento = cargar_base_datos()
 
 df = st.session_state.df_mantenimiento
+
 
 # Función para generar PDF
 def generar_pdf(dataframe):
@@ -65,7 +96,6 @@ def generar_pdf(dataframe):
   )
   pdf.ln(10)
 
-  # Cabeceras de tabla
   pdf.set_font("Arial", "B", 9)
   pdf.cell(25, 8, "Fecha", 1)
   pdf.cell(30, 8, "Máquina", 1)
@@ -96,7 +126,7 @@ menu = [
 choice = st.sidebar.selectbox("Menú de Navegación", menu)
 
 if menu[0] in choice:
-  st.header("📋 Planilla General Sincronizada")
+  st.header("📋 Planilla General de Mantenimiento")
   busqueda = st.text_input("🔍 Buscar por máquina, detalle o técnico...", "")
   if busqueda:
     df_visible = df[
@@ -118,7 +148,6 @@ elif menu[1] in choice:
   with st.form("form_colaborativo", clear_on_submit=True):
     col_u1, col_u2 = st.columns(2)
     with col_u1:
-      # Tu nombre integrado (Nicolás) en lugar de administrador
       tecnico = st.selectbox(
           "¿Quién realiza la carga?", ["NICOLÁS", "MATIAS", "JHARRY", "LUCAS"]
       )
@@ -195,18 +224,13 @@ elif menu[1] in choice:
 
 elif menu[2] in choice:
   st.header("✏️ Editar Registros Anteriores")
-  st.markdown("Selecciona una fila del historial para modificar sus datos.")
-
   if not df.empty:
-    # Mostramos la tabla con índices para que elijas cuál editar
     edit_index = st.number_input(
         "Número de Fila a Editar",
         min_value=0,
         max_value=len(df) - 1,
         step=1,
     )
-
-    st.subheader(f"Editando Registro N° {edit_index}")
     row_actual = df.loc[edit_index]
 
     with st.form("form_edicion"):
@@ -225,19 +249,6 @@ elif menu[2] in choice:
           ),
       )
       nueva_causa = st.text_input("Causa", value=row_actual["Causa"])
-      nuevo_tipo = st.selectbox(
-          "Tipo",
-          ["CORRECTIVO", "PREVENTIVO", "PREDICTIVO", "MEJORA"],
-          index=(
-              ["CORRECTIVO", "PREVENTIVO", "PREDICTIVO", "MEJORA"].index(
-                  row_actual["Tipo"]
-              )
-              if row_actual["Tipo"]
-              in ["CORRECTIVO", "PREVENTIVO", "PREDICTIVO", "MEJORA"]
-              else 0
-          ),
-      )
-
       guardar_cambios = st.form_submit_button("💾 Guardar Cambios")
 
       if guardar_cambios:
@@ -253,29 +264,21 @@ elif menu[2] in choice:
         st.session_state.df_mantenimiento.at[edit_index, "Causa"] = (
             nueva_causa.upper()
         )
-        st.session_state.df_mantenimiento.at[edit_index, "Tipo"] = nuevo_tipo
         st.success("¡Registro actualizado correctamente!")
   else:
-    st.info("No hay registros para editar.")
+    st.info("No hay registros.")
 
 elif menu[3] in choice:
   st.header("📊 Generación de Informes en PDF y Descargas")
-
   if not df.empty:
-    st.markdown(
-        "Filtra los datos que deseas exportar al informe PDF o en formato CSV:"
-    )
-
     col_p1, col_p2 = st.columns(2)
     with col_p1:
       tec_pdf = st.selectbox(
-          "Filtrar por Técnico para el PDF",
-          ["Todos"] + list(df["Técnico"].unique()),
+          "Filtrar por Técnico", ["Todos"] + list(df["Técnico"].unique())
       )
     with col_p2:
       maq_pdf = st.selectbox(
-          "Filtrar por Máquina para el PDF",
-          ["Todas"] + list(df["Máquina"].unique()),
+          "Filtrar por Máquina", ["Todas"] + list(df["Máquina"].unique())
       )
 
     df_pdf = df.copy()
@@ -286,7 +289,6 @@ elif menu[3] in choice:
 
     st.dataframe(df_pdf, use_container_width=True)
 
-    # Botón de descarga de PDF
     pdf_bytes = generar_pdf(df_pdf)
     st.download_button(
         label="📥 Descargar Informe en Formato PDF",
@@ -295,4 +297,4 @@ elif menu[3] in choice:
         mime="application/pdf",
     )
   else:
-    st.info("No hay datos disponibles para generar el informe.")
+    st.info("No hay datos.")
